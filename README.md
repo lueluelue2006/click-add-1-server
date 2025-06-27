@@ -9,3 +9,4 @@
 - 1.1版本人机对战：https://click-add-1-bot-1-1.deno.dev
 - 2.1版本人机对战：https://click-add-1-bot-2-1.deno.dev
 - 3.1版本人机对战：https://click-add-1-bot-3-1.deno.dev
+- 3.2版本人机对战：https://click-add-1-bot-3-2.deno.dev
