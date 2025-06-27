@@ -5,6 +5,7 @@
 - 本地双人对战.html 直接使用浏览器打开即可，支持双人对战
 2. **Demo（对局密码全都是2025）**
 - 在线双人对战：https://click-add-1-1v1-room-1.deno.dev
+- 0.1版本人机对战：https://click-add-1-bot-0-1.deno.dev
 - 1.0版本人机对战：https://click-add-1-bot-1-0.deno.dev
 - 1.1版本人机对战：https://click-add-1-bot-1-1.deno.dev
 - 2.1版本人机对战：https://click-add-1-bot-2-1.deno.dev
