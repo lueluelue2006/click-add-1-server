@@ -1,0 +1,3649 @@
+<!DOCTYPE html>
+<html lang="zh" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>点我加一对战模式 | 双人策略对战游戏</title>
+    <style>
+/* 定义亮色模式和暗色模式的颜色变量 */
+:root {
+    /* 亮色模式 */
+    --bg-color: #f4f4f4;
+    --container-bg: white;
+    --text-color: #333;
+    --heading-color: #4a4a4a;
+    --counter-color: #555;
+    --button-bg: #4caf50;
+    --button-hover-bg: #388e3c;
+    --button-text: white;
+    --cell-bg: #e0e0e0;
+    --cell-shadow: rgba(0, 0, 0, 0.1);
+    --highlight-color: #ffeb3b;
+    --player1-color: #2196f3;
+    --player2-color: #f44336;
+    --hp-bg: #e0e0e0;
+    --hp-player1: #4caf50;
+    --hp-player2: #ff9800;
+    --disabled-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* 暗色模式 */
+[data-theme="dark"] {
+    --bg-color: #121212;
+    --container-bg: #1e1e1e;
+    --text-color: #e0e0e0;
+    --heading-color: #f0f0f0;
+    --counter-color: #b0b0b0;
+    --button-bg: #2e7d32;
+    --button-hover-bg: #1b5e20;
+    --button-text: #e0e0e0;
+    --cell-bg: #2a2a2a;
+    --cell-shadow: rgba(0, 0, 0, 0.3);
+    --highlight-color: #ffd600;
+    --player1-color: #42a5f5;
+    --player2-color: #ef5350;
+    --hp-bg: #424242;
+    --hp-player1: #66bb6a;
+    --hp-player2: #ffa726;
+    --disabled-bg: rgba(255, 255, 255, 0.1);
+}
+
+/* 禁用文本选择 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* 允许输入框选择文本 */
+input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s ease;
+    padding: 10px;
+    min-height: 100vh;
+    /* 禁用触摸放大缩小 */
+    touch-action: manipulation;
+}
+
+.container {
+    background-color: var(--container-bg);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    transition: background-color 0.3s ease;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+    min-height: calc(100vh - 20px);
+    display: flex;
+    flex-direction: column;
+}
+
+/* 顶部设置和标题 */
+.game-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.settings-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.theme-switch, .sound-switch {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.theme-label {
+    margin-left: 10px;
+    font-size: 0.9rem;
+    color: var(--counter-color);
+    opacity: 0.7;
+    transition: color 0.3s ease;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--button-bg);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+h1 {
+    color: var(--heading-color);
+    margin-bottom: 20px;
+    transition: color 0.3s ease;
+    font-size: 2rem;
+}
+
+/* 游戏主体布局 */
+.game-layout {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 30px;
+    flex: 1;
+}
+
+.player-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    min-width: 350px;
+    position: relative;
+}
+
+.player-section.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.player-section.disabled .game-board {
+    background: var(--disabled-bg);
+}
+
+.player-section.disabled .game-board .cell {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* 玩家信息区域 */
+.player-info {
+    width: 100%;
+    max-width: 350px;
+    padding: 20px;
+    border-radius: 15px;
+    border: 3px solid transparent;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    backdrop-filter: blur(10px);
+}
+
+.player-info.active {
+    border-color: var(--highlight-color);
+    box-shadow: 0 0 15px rgba(255, 235, 59, 0.4);
+    transform: scale(1.02);
+}
+
+.player-info.player1.active {
+    border-color: var(--player1-color);
+    box-shadow: 0 0 15px rgba(33, 150, 243, 0.4);
+}
+
+.player-info.player2.active {
+    border-color: var(--player2-color);
+    box-shadow: 0 0 15px rgba(244, 67, 54, 0.4);
+}
+
+.player-name {
+    font-size: 1.6rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-align: center;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.player1 .player-name {
+    color: var(--player1-color);
+}
+
+.player2 .player-name {
+    color: var(--player2-color);
+}
+
+.turn-indicator {
+    text-align: center;
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.player-info.active .turn-indicator {
+    opacity: 1;
+}
+
+.player1 .turn-indicator {
+    color: var(--player1-color);
+    border: 2px solid var(--player1-color);
+}
+
+.player2 .turn-indicator {
+    color: var(--player2-color);
+    border: 2px solid var(--player2-color);
+}
+
+.hp-container {
+    margin-bottom: 15px;
+}
+
+.hp-label {
+    font-size: 1rem;
+    margin-bottom: 8px;
+    color: var(--counter-color);
+    font-weight: 600;
+}
+
+.hp-bar {
+    width: 100%;
+    height: 25px;
+    background-color: var(--hp-bg);
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    border: 2px solid rgba(255,255,255,0.3);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.hp-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+    position: relative;
+}
+
+.player1 .hp-fill {
+    background: linear-gradient(90deg, #2196f3, #42a5f5);
+}
+
+.player2 .hp-fill {
+    background: linear-gradient(90deg, #ff9800, #ffa726);
+}
+
+.hp-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.9rem;
+    font-style: italic;
+    color: #000;
+    text-shadow: 1px 1px 2px rgba(255,255,255,0.7);
+    z-index: 10;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* 游戏状态信息 */
+.game-stats {
+    width: 100%;
+    max-width: 350px;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(0,0,0,0.05), rgba(0,0,0,0.02));
+    border-radius: 15px;
+    border: 2px solid rgba(255,255,255,0.1);
+}
+
+[data-theme="dark"] .game-stats {
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    border: 2px solid rgba(255,255,255,0.1);
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.stats-row:last-child {
+    margin-bottom: 0;
+}
+
+.counter-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+}
+
+.counter-label {
+    font-weight: bold;
+    color: var(--counter-color);
+    transition: color 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.progress-bar-container {
+    width: 120px;
+    height: 8px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 100%;
+    background-color: var(--button-bg);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.damage-display {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: var(--player2-color);
+}
+
+/* 游戏棋盘 */
+.game-board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 350px;
+    aspect-ratio: 1;
+    position: relative;
+    border-radius: 15px;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+    /* 禁用拖拽 */
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+}
+
+.player-section.active .game-board {
+    border-color: var(--highlight-color);
+    box-shadow: 0 0 10px rgba(255, 235, 59, 0.3);
+}
+
+.player1.active .game-board {
+    border-color: var(--player1-color);
+    box-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+}
+
+.player2.active .game-board {
+    border-color: var(--player2-color);
+    box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+}
+
+.cell {
+    background-color: var(--cell-bg);
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: clamp(14px, 3vw, 20px);
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.05s ease-out, background-color 0.15s ease-out;
+    box-shadow: 0 2px 5px var(--cell-shadow);
+    will-change: transform;
+    min-height: 45px;
+    /* 禁用拖拽和选择 */
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.cell:hover {
+    transform: scale(1.05);
+}
+
+.cell.empty {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.cell.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.cell.disabled:hover {
+    transform: none;
+}
+
+/* 数字颜色样式保持不变 */
+:root .cell[data-value="1"] { background-color: #a2d2ff; }
+:root .cell[data-value="2"] { background-color: #bde0fe; }
+:root .cell[data-value="3"] { background-color: #ffafcc; }
+:root .cell[data-value="4"] { background-color: #ffc8dd; }
+:root .cell[data-value="5"] { background-color: #cdb4db; }
+:root .cell[data-value="6"] { background-color: #98f5e1; }
+:root .cell[data-value="7"] { background-color: #8eecf5; }
+:root .cell[data-value="8"] { background-color: #90dbf4; }
+:root .cell[data-value="9"] { background-color: #f08080; }
+:root .cell[data-value="10"] { background-color: #f4a261; }
+:root .cell[data-value="11"] { background-color: #e9c46a; }
+:root .cell[data-value="12"] { background-color: #2a9d8f; }
+:root .cell[data-value="13"] { background-color: #e76f51; }
+:root .cell[data-value="14"] { background-color: #606c38; }
+:root .cell[data-value="15"] { background-color: #dda15e; }
+:root .cell[data-value="16"] { background-color: #bc6c25; }
+:root .cell[data-value="17"] { background-color: #8338ec; }
+:root .cell[data-value="18"] { background-color: #3a86ff; }
+:root .cell[data-value="19"] { background-color: #fb8500; }
+/* 特殊方块样式 */
+.cell[data-value="0"] { 
+    background-color: #424242; 
+    color: #fff; 
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .cell[data-value="0"] { 
+    background-color: #212121; 
+    color: #fff; 
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+/* 挑衅方块样式 */
+.cell[data-value="50"] { 
+    background-color: #d32f2f; 
+    color: #fff; 
+    box-shadow: 0 0 15px rgba(211, 47, 47, 0.5);
+    border: 2px solid #ffeb3b;
+    font-weight: bold;
+}
+
+[data-theme="dark"] .cell[data-value="50"] { 
+    background-color: #b71c1c; 
+    color: #fff; 
+    box-shadow: 0 0 15px rgba(183, 28, 28, 0.7);
+    border: 2px solid #ffc107;
+}
+
+[data-theme="dark"] .cell[data-value="1"] { background-color: #01295f; color: #fff; }
+[data-theme="dark"] .cell[data-value="2"] { background-color: #013a8b; color: #fff; }
+[data-theme="dark"] .cell[data-value="3"] { background-color: #5f0140; color: #fff; }
+[data-theme="dark"] .cell[data-value="4"] { background-color: #7a0158; color: #fff; }
+[data-theme="dark"] .cell[data-value="5"] { background-color: #4a0155; color: #fff; }
+[data-theme="dark"] .cell[data-value="6"] { background-color: #014d40; color: #fff; }
+[data-theme="dark"] .cell[data-value="7"] { background-color: #016064; color: #fff; }
+[data-theme="dark"] .cell[data-value="8"] { background-color: #014f86; color: #fff; }
+[data-theme="dark"] .cell[data-value="9"] { background-color: #6a040f; color: #fff; }
+[data-theme="dark"] .cell[data-value="10"] { background-color: #9c2c13; color: #fff; }
+[data-theme="dark"] .cell[data-value="11"] { background-color: #9a6a15; color: #fff; }
+[data-theme="dark"] .cell[data-value="12"] { background-color: #005f56; color: #fff; }
+[data-theme="dark"] .cell[data-value="13"] { background-color: #9c3311; color: #fff; }
+[data-theme="dark"] .cell[data-value="14"] { background-color: #283809; color: #fff; }
+[data-theme="dark"] .cell[data-value="15"] { background-color: #935a15; color: #fff; }
+[data-theme="dark"] .cell[data-value="16"] { background-color: #773e15; color: #fff; }
+[data-theme="dark"] .cell[data-value="17"] { background-color: #4715a7; color: #fff; }
+[data-theme="dark"] .cell[data-value="18"] { background-color: #0750c7; color: #fff; }
+[data-theme="dark"] .cell[data-value="19"] { background-color: #a94900; color: #fff; }
+[data-theme="dark"] .cell[data-value="20"] { background-color: #a31630; color: #fff; }
+
+/* 动画效果 */
+.falling {
+    animation: fall 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    will-change: transform;
+}
+
+.new-cell {
+    transition: opacity 0.25s ease-in;
+    opacity: 1;
+}
+
+.highlight {
+    animation: pulse 0.15s ease-in-out;
+    background-color: var(--highlight-color);
+    will-change: transform;
+}
+
+.pulse {
+    animation: pulseOut 0.15s ease-in-out;
+    will-change: transform, opacity;
+}
+
+@keyframes fall {
+    0% {
+        transform: translateY(-60px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+@keyframes pulseOut {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes vanish {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(0);
+        opacity: 0;
+    }
+}
+
+.vanish {
+    animation: vanish 0.15s ease-in-out;
+}
+
+.cell-clone {
+    position: absolute;
+    z-index: 100;
+    transition-property: top, left;
+    transition-timing-function: ease-in-out;
+    transition-duration: 0.1s;
+    pointer-events: none;
+}
+
+.new-connected {
+    animation: newConnected 0.4s ease-in-out;
+    box-shadow: 0 0 4px rgba(255, 235, 59, 0.4);
+    z-index: 5;
+}
+
+@keyframes newConnected {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 2px rgba(255, 235, 59, 0.3);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 6px rgba(255, 235, 59, 0.5);
+    }
+}
+
+/* 飞向血条的方块动画 */
+.flying-block {
+    position: fixed;
+    z-index: 200;
+    pointer-events: none;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 震动动画 */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+    20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+.shake {
+    animation: shake 0.4s ease-in-out;
+}
+
+/* 中间控制区域 */
+.center-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    min-width: 200px;
+    padding: 0 20px;
+}
+
+.current-turn {
+    text-align: center;
+    padding: 15px 25px;
+    border-radius: 15px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    border: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.current-turn.player1 {
+    border-color: var(--player1-color);
+    color: var(--player1-color);
+}
+
+.current-turn.player2 {
+    border-color: var(--player2-color);
+    color: var(--player2-color);
+}
+
+.current-turn h3 {
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+}
+
+.current-turn p {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-bottom: 10px;
+}
+
+.timer-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.timer-value {
+    font-size: 1.4rem;
+    min-width: 30px;
+    text-align: center;
+}
+
+.timer-display.warning {
+    background: rgba(255, 152, 0, 0.2);
+    animation: timerWarning 1s infinite alternate;
+}
+
+.timer-display.danger {
+    background: rgba(244, 67, 54, 0.2);
+    animation: timerDanger 0.5s infinite alternate;
+}
+
+@keyframes timerWarning {
+    0% { background: rgba(255, 152, 0, 0.2); }
+    100% { background: rgba(255, 152, 0, 0.4); }
+}
+
+@keyframes timerDanger {
+    0% { background: rgba(244, 67, 54, 0.2); }
+    100% { background: rgba(244, 67, 54, 0.5); }
+}
+
+/* 中间技能按钮样式 */
+.center-skills {
+    margin: 20px 0;
+    width: 100%;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto;
+}
+
+.center-skill-btn {
+    padding: 8px 10px;
+    background: linear-gradient(135deg, #673ab7, #9c27b0);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    line-height: 1.2;
+    position: relative;
+    white-space: nowrap;
+}
+
+.center-skill-btn:hover {
+    background: linear-gradient(135deg, #7e57c2, #ba68c8);
+    transform: translateY(-1px);
+}
+
+.center-skill-btn:disabled {
+    background: #bdbdbd;
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.center-skill-btn:disabled:hover {
+    background: #bdbdbd;
+    transform: none;
+}
+
+.center-skill-btn.active {
+    background: linear-gradient(135deg, #ff9800, #ff5722);
+    box-shadow: 0 0 10px rgba(255, 152, 0, 0.5);
+}
+
+.center-skill-btn.active:hover {
+    background: linear-gradient(135deg, #ffa726, #ff7043);
+}
+
+/* 技能悬停提示 */
+.skill-tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    z-index: 1000;
+    max-width: 200px;
+    white-space: pre-wrap;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.skill-tooltip.show {
+    opacity: 1;
+}
+
+/* 回合计数器 */
+.turn-counter {
+    text-align: center;
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--counter-color);
+    margin-top: 15px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    border-radius: 20px;
+    border: 2px solid rgba(255,255,255,0.2);
+}
+
+.turn-counter span {
+    color: var(--button-bg);
+    font-size: 1.2rem;
+}
+
+/* 治疗状态显示 */
+.heal-status {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #f44336;
+    font-weight: bold;
+    margin-top: 5px;
+    min-height: 16px;
+}
+
+/* 技能选择模式下的方块样式 */
+.cell.skill-selectable {
+    border: 2px solid #ff9800;
+    box-shadow: 0 0 8px rgba(255, 152, 0, 0.5);
+    cursor: pointer;
+}
+
+.cell.skill-selected {
+    border: 2px solid #4caf50;
+    background-color: rgba(76, 175, 80, 0.3) !important;
+    box-shadow: 0 0 12px rgba(76, 175, 80, 0.7);
+}
+.game-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+button {
+    padding: 12px 24px;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 140px;
+}
+
+button:hover {
+    background-color: var(--button-hover-bg);
+    transform: translateY(-2px);
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+button:disabled:hover {
+    background-color: var(--button-bg);
+    transform: none;
+}
+
+#end-turn-btn {
+    background-color: #ff9800;
+    font-weight: bold;
+}
+
+#end-turn-btn:hover {
+    background-color: #f57c00;
+}
+
+#end-turn-btn:disabled {
+    background-color: #bdbdbd;
+    opacity: 0.6;
+}
+
+#end-turn-btn:disabled:hover {
+    background-color: #bdbdbd;
+    transform: none;
+}
+
+/* 弹出动画 */
+.damage-popup {
+    position: absolute;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #f44336;
+    z-index: 200;
+    pointer-events: none;
+    opacity: 1;
+    transition: all 1s ease-out;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.damage-popup.fade-up {
+    transform: translateY(-80px);
+    opacity: 0;
+}
+
+.heal-popup {
+    position: absolute;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #4caf50;
+    z-index: 200;
+    pointer-events: none;
+    opacity: 1;
+    transition: all 1s ease-out;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.heal-popup.fade-up {
+    transform: translateY(-50px);
+    opacity: 0;
+}
+
+/* HP 动画效果 */
+@keyframes hpDamage {
+    0% { background-color: rgba(244, 67, 54, 0.3); }
+    100% { background-color: transparent; }
+}
+
+@keyframes hpHeal {
+    0% { background-color: rgba(76, 175, 80, 0.3); }
+    100% { background-color: transparent; }
+}
+
+.hp-damage {
+    animation: hpDamage 0.5s ease-out;
+}
+
+.hp-heal {
+    animation: hpHeal 0.5s ease-out;
+}
+
+/* 游戏结束弹框 */
+.game-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.game-modal.show {
+    opacity: 1;
+}
+
+.game-modal::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 350px;
+    height: 300px;
+    background-color: var(--container-bg);
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    z-index: -1;
+    padding: 20px;
+}
+
+.game-modal h2 {
+    color: var(--heading-color);
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 2rem;
+}
+
+.victory-message {
+    margin: 20px 0;
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+.player1-victory {
+    color: var(--player1-color);
+}
+
+.player2-victory {
+    color: var(--player2-color);
+}
+
+.game-results {
+    margin: 20px 0;
+    text-align: center;
+}
+
+.game-results p {
+    margin: 10px 0;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+.highlight-text {
+    font-weight: bold;
+    color: var(--button-bg);
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 25px;
+}
+
+.modal-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0 10px;
+}
+
+.primary-btn {
+    background-color: var(--button-bg);
+    color: white;
+}
+
+.primary-btn:hover {
+    background-color: var(--button-hover-bg);
+    transform: scale(1.05);
+}
+
+.modal-btn:not(.primary-btn) {
+    background-color: #e0e0e0;
+    color: #333;
+}
+
+.modal-btn:not(.primary-btn):hover {
+    background-color: #d0d0d0;
+    transform: scale(1.05);
+}
+
+[data-theme="dark"] .modal-btn:not(.primary-btn) {
+    background-color: #424242;
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .modal-btn:not(.primary-btn):hover {
+    background-color: #535353;
+}
+
+.modal-message {
+    text-align: center;
+    margin: 20px 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+}
+
+#confirm-modal::before {
+    width: 320px;
+    height: 180px;
+}
+
+/* 技能选择弹框样式 */
+.skill-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.skill-option-btn {
+    padding: 15px 10px;
+    font-size: 14px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #a8e6cf, #88d8a3);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.skill-option-btn:hover {
+    background: linear-gradient(135deg, #7dd3a0, #66bb6a);
+    transform: scale(1.05);
+}
+
+/* 游戏规则 */
+.game-rules {
+    margin-top: 30px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    border-radius: 15px;
+    border: 2px solid rgba(255,255,255,0.1);
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.game-rules h2 {
+    font-size: 1.2rem;
+    color: var(--button-bg);
+    margin: 0 0 15px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--button-bg);
+    text-align: center;
+}
+
+.game-rules ul {
+    margin: 0;
+    text-align: left;
+    padding-left: 20px;
+}
+
+.game-rules li {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin: 10px 0;
+    color: var(--text-color);
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+    .game-layout {
+        flex-direction: column;
+        align-items: center;
+        gap: 30px;
+    }
+    
+    .center-controls {
+        order: 2;
+        min-width: auto;
+        padding: 0;
+    }
+    
+    .player-section {
+        min-width: auto;
+        width: 100%;
+        max-width: 500px;
+    }
+    
+    .player-section:first-child {
+        order: 1;
+    }
+    
+    .player-section:last-child {
+        order: 3;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+    
+    .settings-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    .player-info {
+        padding: 15px;
+    }
+    
+    .game-board {
+        max-width: 300px;
+        padding: 12px;
+    }
+    
+    .cell {
+        min-height: 40px;
+        font-size: clamp(12px, 4vw, 18px);
+    }
+    
+    .game-modal::before {
+        width: 90%;
+        height: auto;
+        aspect-ratio: 1/1.1;
+    }
+    
+    .game-modal h2 {
+        font-size: 1.5rem;
+    }
+    
+    .victory-message {
+        font-size: 1.1rem;
+    }
+}
+
+/* 在暗黑模式下调整显示 */
+[data-theme="dark"] .damage-popup {
+    color: #ef5350;
+}
+
+[data-theme="dark"] .heal-popup {
+    color: #66bb6a;
+}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-header">
+            <div class="settings-container">
+                <div class="theme-switch">
+                    <label class="switch">
+                        <input type="checkbox" id="theme-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="theme-label">暗黑模式</span>
+                </div>
+                <div class="sound-switch">
+                    <label class="switch">
+                        <input type="checkbox" id="sound-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                    <span>音效</span>
+                </div>
+            </div>
+            
+            <h1>点我加一对战</h1>
+        </div>
+        
+        <div class="game-layout">
+            <!-- 玩家1区域 -->
+            <div class="player-section player1 active" id="player1-section">
+                <div class="player-info player1 active" id="player1-info">
+                    <div class="player-name">玩家1</div>
+                    <div class="turn-indicator">你的回合</div>
+                    <div class="hp-container">
+                        <div class="hp-label">生命值</div>
+                        <div class="hp-bar">
+                            <div class="hp-fill" id="player1-hp-fill" style="width: 100%;"></div>
+                            <div class="hp-text" id="player1-hp-text">2500 / 2500</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="game-stats">
+                    <div class="stats-row">
+                        <div class="counter-container">
+                            <div class="counter-label">
+                                行动力: <span id="player1-clicks-left">5</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="player1-clicks-progress" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="heal-status" id="player1-heal-status"></div>
+                </div>
+                
+                <div class="game-board" id="player1-board" data-player="1"></div>
+            </div>
+            
+            <!-- 中间控制区域 -->
+            <div class="center-controls">
+                <div class="current-turn player1" id="current-turn-display">
+                    <h3>玩家1 的回合</h3>
+                    <p>轮到你行动了！</p>
+                    <div class="timer-display" id="timer-display">
+                        <span class="timer-label">剩余时间:</span>
+                        <span class="timer-value" id="timer-value">30</span>
+                        <span class="timer-unit">秒</span>
+                    </div>
+                </div>
+                
+                <div class="game-buttons">
+                    <button id="end-turn-btn">结束回合</button>
+                    <button id="restart-btn">重新开始</button>
+                </div>
+
+                <div class="center-skills">
+                    <div class="skills-grid">
+                        <button class="center-skill-btn" data-skill="swap" data-cost="200" title="可以交换场上任意两个方块">
+                            交换方块(-200)
+                        </button>
+                        <button class="center-skill-btn" data-skill="modify" data-cost="100" title="己方或对方方块所有数值+1或者-1">
+                            数值±1(-100)
+                        </button>
+                        <button class="center-skill-btn" data-skill="block" data-cost="100" title="禁用对方回血20回合">
+                            生命枯竭(-100)
+                        </button>
+                        <button class="center-skill-btn" data-skill="destroy" data-cost="200" title="随机让对方一个方块变成50（无法使用正常手段消除）">
+                            挑衅(-200)
+                        </button>
+                        <button class="center-skill-btn" data-skill="breakthrough" data-cost="400" title="把己方场上所有小于4的方块全部变成4，并恢复满行动力（需第4回合后）">
+                            搏命突围(-400)
+                        </button>
+                        <button class="center-skill-btn" data-skill="sacrifice" data-cost="40" title="消耗40血量，获得1点行动力">
+                            苦肉(-40)
+                        </button>
+                        <button class="center-skill-btn" data-skill="mindclear" data-cost="200" title="选择自己的一个方块，所有相同数值的方块被消除并造成伤害">
+                            心意消除(-200)
+                        </button>
+                        <button class="center-skill-btn" data-skill="odin" data-cost="400" title="消耗400血量，当前回合所有攻击伤害翻倍">
+                            奥丁祝福(-400)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="turn-counter">
+                    第 <span id="turn-count">1</span> 回合
+                </div>
+            </div>
+            
+            <!-- 玩家2区域 -->
+            <div class="player-section player2" id="player2-section">
+                <div class="player-info player2" id="player2-info">
+                    <div class="player-name">玩家2</div>
+                    <div class="turn-indicator">等待中...</div>
+                    <div class="hp-container">
+                        <div class="hp-label">生命值</div>
+                        <div class="hp-bar">
+                            <div class="hp-fill" id="player2-hp-fill" style="width: 100%;"></div>
+                            <div class="hp-text" id="player2-hp-text">2500 / 2500</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="game-stats">
+                    <div class="stats-row">
+                        <div class="counter-container">
+                            <div class="counter-label">
+                                行动力: <span id="player2-clicks-left">5</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar" id="player2-clicks-progress" style="width: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="heal-status" id="player2-heal-status"></div>
+                </div>
+                
+                <div class="game-board" id="player2-board" data-player="2"></div>
+            </div>
+        </div>
+        
+        <div class="game-rules">
+            <h2>⚔️ 对战规则</h2>
+            <ul>
+                <li>双方各有2500血量，轮流在自己的棋盘上行动</li>
+                <li>点击方块数字+1，三个或更多相同数字连线即可消除</li>
+                <li>消除获得的积分转化为伤害打给对手</li>
+                <li>每次消除只回复0.5行动力</li>
+                <li>结束回合时自己生命值+场上最大数字的数值</li>
+                <li>只有轮到自己的回合才能操作自己的棋盘</li>
+                <li><strong>技能系统：</strong>可消耗血量使用特殊技能</li>
+                <li>率先击败对手获胜！</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // 游戏状态
+    const gameState = {
+        boardSize: 5,
+        isAnimating: false,
+        soundEnabled: true,
+        
+        // 对战相关状态
+        currentPlayer: 1, // 1 或 2
+        players: {
+            1: {
+                hp: 2500,
+                maxHp: 2500,
+                clicksLeft: 5,
+                maxClicks: 5,
+                damage: 0,
+                board: [],
+                cellElements: []
+            },
+            2: {
+                hp: 2500,
+                maxHp: 2500,
+                clicksLeft: 5,
+                maxClicks: 5,
+                damage: 0,
+                board: [],
+                cellElements: []
+            }
+        },
+        gameEnded: false,
+        
+        // 技能系统
+        skillMode: {
+            active: false,
+            type: null, // 'swap' 
+            selectedCells: [],
+            targetPlayer: null
+        },
+        
+        // 玩家状态效果
+        playerEffects: {
+            1: {
+                healBlocked: false, // 是否被禁用回血
+                healBlockTurns: 0,   // 禁用回血剩余回合数
+                doubleDamage: false  // 本回合攻击力翻倍
+            },
+            2: {
+                healBlocked: false,
+                healBlockTurns: 0,
+                doubleDamage: false
+            }
+        },
+        
+        // 计时器相关
+        turnTimer: null,
+        timeLeft: 30, // 第一回合30秒
+        isFirstTurn: true,
+        
+        // 防止快速点击导致的状态错乱
+        isEndingTurn: false,
+        lastActionTime: 0,
+        lastEndTurnTime: 0,
+        // 回合计数
+        turnCount: 0,
+    };
+
+    // 音效管理
+    const sounds = {
+        click: createBeep(800, 0.1, 'sine'),
+        merge: createBeep(1200, 0.2, 'triangle'),
+        damage: createBeep(400, 0.3, 'sawtooth'),
+        heal: createBeep(1000, 0.2, 'triangle')
+    };
+
+    function createBeep(frequency, duration, type = 'sine') {
+        return {
+            play: () => {
+                if (!gameState.soundEnabled) return;
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = frequency;
+                    oscillator.type = type;
+                    
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+                    
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + duration);
+                } catch (error) {
+                    // 音效播放失败时不影响游戏
+                }
+            }
+        };
+    }
+
+    function playSound(soundName) {
+        if (gameState.soundEnabled && sounds[soundName]) {
+            sounds[soundName].play();
+        }
+    }
+
+    // DOM 元素
+    const restartButton = document.getElementById('restart-btn');
+    const endTurnButton = document.getElementById('end-turn-btn');
+    const themeToggle = document.getElementById('theme-toggle');
+    const soundToggle = document.getElementById('sound-toggle');
+    const currentTurnDisplay = document.getElementById('current-turn-display');
+    const timerDisplay = document.getElementById('timer-display');
+    const timerValue = document.getElementById('timer-value');
+    
+    // 玩家区域元素
+    const player1Section = document.getElementById('player1-section');
+    const player2Section = document.getElementById('player2-section');
+    const player1Info = document.getElementById('player1-info');
+    const player2Info = document.getElementById('player2-info');
+    
+    // 玩家棋盘元素
+    const player1Board = document.getElementById('player1-board');
+    const player2Board = document.getElementById('player2-board');
+    
+    // 玩家状态元素
+    const player1HpFill = document.getElementById('player1-hp-fill');
+    const player2HpFill = document.getElementById('player2-hp-fill');
+    const player1HpText = document.getElementById('player1-hp-text');
+    const player2HpText = document.getElementById('player2-hp-text');
+    
+    const player1ClicksLeft = document.getElementById('player1-clicks-left');
+    const player2ClicksLeft = document.getElementById('player2-clicks-left');
+    const player1ClicksProgress = document.getElementById('player1-clicks-progress');
+    const player2ClicksProgress = document.getElementById('player2-clicks-progress');
+
+    // 禁用键盘快捷键
+    document.addEventListener('keydown', (e) => {
+        // 禁用常见的键盘快捷键
+        if (e.ctrlKey || e.metaKey) {
+            // 允许复制粘贴等基本操作和缩放操作，但禁用其他快捷键
+            if (!['c', 'v', 'x', 'a', 'z', '+', '=', '-'].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+            }
+        }
+        
+        // 禁用F5刷新、F12开发者工具等
+        if (['F5', 'F12'].includes(e.key)) {
+            e.preventDefault();
+        }
+        
+        // 禁用空格键滚动页面
+        if (e.key === ' ') {
+            e.preventDefault();
+        }
+        
+        // 禁用方向键滚动
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            e.preventDefault();
+        }
+    });
+
+    // 禁用右键菜单
+    document.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+
+    // 禁用文本选择
+    document.addEventListener('selectstart', (e) => {
+        if (!e.target.matches('input, textarea')) {
+            e.preventDefault();
+        }
+    });
+
+    // 事件监听
+    soundToggle.addEventListener('change', () => {
+        gameState.soundEnabled = soundToggle.checked;
+    });
+
+    const savedSound = gameState.soundEnabled;
+    soundToggle.checked = savedSound;
+
+    restartButton.addEventListener('click', () => {
+        showConfirmModal('确定要重新开始游戏吗？', '当前对战进度将丢失。', () => {
+            initGame();
+        });
+    });
+
+    endTurnButton.addEventListener('click', () => {
+        if (!gameState.isAnimating && !gameState.isEndingTurn && !gameState.gameEnded && !gameState.endTurnCooldown) {
+            gameState.isEndingTurn = true;
+            gameState.endTurnCooldown = true;
+            
+            // 禁用按钮防止重复点击
+            endTurnButton.disabled = true;
+            
+            // 强制1秒全局冷却
+            setTimeout(() => {
+                gameState.endTurnCooldown = false;
+            }, 1000);
+            
+            endTurn();
+        }
+    });
+    
+    themeToggle.addEventListener('change', toggleTheme);
+
+    // 技能按钮事件监听
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('center-skill-btn')) {
+            handleSkillClick(e.target);
+        }
+    });
+
+    // 技能悬停提示
+    let skillTooltip = null;
+    let tooltipTimeout = null;
+    
+    document.addEventListener('mouseenter', (e) => {
+        if (e.target.classList.contains('center-skill-btn')) {
+            tooltipTimeout = setTimeout(() => {
+                showSkillTooltip(e.target);
+            }, 1000);
+        }
+    }, true);
+    
+    document.addEventListener('mouseleave', (e) => {
+        if (e.target.classList.contains('center-skill-btn')) {
+            if (tooltipTimeout) {
+                clearTimeout(tooltipTimeout);
+                tooltipTimeout = null;
+            }
+            hideSkillTooltip();
+        }
+    }, true);
+
+    // 初始化
+    initTheme();
+    initGame();
+
+    function initTheme() {
+        const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDarkScheme) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.checked = true;
+        }
+    }
+    
+    function toggleTheme() {
+        const newTheme = themeToggle.checked ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+    }
+
+    function initGame() {
+        // 重置游戏状态
+        gameState.currentPlayer = 1;
+        gameState.gameEnded = false;
+        gameState.isAnimating = false;
+        gameState.isFirstTurn = true;
+        gameState.timeLeft = 30; // 第一回合30秒
+        gameState.isEndingTurn = false;
+        gameState.lastActionTime = 0;
+        gameState.lastEndTurnTime = 0;
+        gameState.endTurnCooldown = false;
+        gameState.turnCount = 1;
+        
+        // 重置技能系统状态
+        gameState.skillMode = {
+            active: false,
+            type: null,
+            selectedCells: [],
+            targetPlayer: null
+        };
+        
+        gameState.playerEffects = {
+            1: { healBlocked: false, healBlockTurns: 0, doubleDamage: false },
+            2: { healBlocked: false, healBlockTurns: 0, doubleDamage: false }
+        };
+        
+        // 重置按钮状态
+        endTurnButton.disabled = false;
+        
+        // 清除现有计时器
+        if (gameState.turnTimer) {
+            clearInterval(gameState.turnTimer);
+            gameState.turnTimer = null;
+        }
+        
+        // 重置玩家数据
+        for (let playerId = 1; playerId <= 2; playerId++) {
+            gameState.players[playerId] = {
+                hp: 2500,
+                maxHp: 2500,
+                clicksLeft: 5,
+                maxClicks: 5,
+                board: [],
+                cellElements: []
+            };
+            
+            initializePlayerBoard(playerId);
+            createPlayerBoardDOM(playerId);
+        }
+        
+        updateAllDisplays();
+        updateCurrentPlayerUI();
+        updateHealStatus();
+        updateSkillButtons();
+        
+        // 更新回合显示
+        document.getElementById('turn-count').textContent = gameState.turnCount;
+        
+        // 开始第一回合计时器
+        startTurnTimer();
+        
+        // 移除任何存在的游戏结束弹框
+        const existingModal = document.getElementById('game-end-modal');
+        if (existingModal && document.body.contains(existingModal)) {
+            document.body.removeChild(existingModal);
+        }
+    }
+
+    function initializePlayerBoard(playerId) {
+        const player = gameState.players[playerId];
+        player.board = [];
+        
+        for (let i = 0; i < gameState.boardSize; i++) {
+            player.board[i] = [];
+            for (let j = 0; j < gameState.boardSize; j++) {
+                player.board[i][j] = Math.floor(Math.random() * 5) + 1;
+            }
+        }
+        
+        // 确保初始棋盘没有连线
+        while (hasConnectedGroups(playerId)) {
+            for (let i = 0; i < gameState.boardSize; i++) {
+                for (let j = 0; j < gameState.boardSize; j++) {
+                    player.board[i][j] = Math.floor(Math.random() * 5) + 1;
+                }
+            }
+        }
+    }
+
+    function createPlayerBoardDOM(playerId) {
+        const player = gameState.players[playerId];
+        const boardElement = playerId === 1 ? player1Board : player2Board;
+        
+        boardElement.innerHTML = '';
+        player.cellElements = [];
+        
+        for (let i = 0; i < gameState.boardSize; i++) {
+            player.cellElements[i] = [];
+            for (let j = 0; j < gameState.boardSize; j++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                
+                const value = player.board[i][j];
+                if (value !== null) {
+                    cell.textContent = value;
+                    cell.setAttribute('data-value', value);
+                } else {
+                    cell.classList.add('empty');
+                }
+                
+                cell.dataset.row = i;
+                cell.dataset.col = j;
+                cell.dataset.player = playerId;
+                cell.addEventListener('click', handleCellClick);
+                
+                boardElement.appendChild(cell);
+                player.cellElements[i][j] = cell;
+            }
+        }
+    }
+
+    function handleCellClick(event) {
+        if (gameState.gameEnded) return;
+        
+        // 技能模式下允许跨越动画和回合限制
+        if (!gameState.skillMode.active && (gameState.isAnimating || gameState.isEndingTurn)) return;
+        
+        // 防止过快点击（防抖动）
+        const now = Date.now();
+        if (now - gameState.lastActionTime < 100) return;
+        gameState.lastActionTime = now;
+        
+        const playerId = parseInt(event.target.dataset.player);
+        const row = parseInt(event.target.dataset.row);
+        const col = parseInt(event.target.dataset.col);
+        
+        // 处理技能模式下的点击
+        if (gameState.skillMode.active) {
+            if (gameState.skillMode.type === 'swap') {
+                if (gameState.players[playerId].board[row][col] === null) return;
+                
+                const cellInfo = { playerId, row, col };
+                
+                if (gameState.skillMode.selectedCells.length === 0) {
+                    // 选择第一个方块
+                    gameState.skillMode.selectedCells.push(cellInfo);
+                    event.target.classList.add('skill-selected');
+                    showMessage('请选择第二个方块进行交换', 'info');
+                } else if (gameState.skillMode.selectedCells.length === 1) {
+                    // 选择第二个方块
+                    const firstCell = gameState.skillMode.selectedCells[0];
+                    
+                    // 检查是否点击了同一个方块
+                    if (firstCell.playerId === playerId && firstCell.row === row && firstCell.col === col) {
+                        // 取消选择
+                        event.target.classList.remove('skill-selected');
+                        gameState.skillMode.selectedCells = [];
+                        showMessage('已取消选择，请重新选择第一个方块', 'info');
+                        return;
+                    }
+                    
+                    // 执行交换
+                    executeSwap(firstCell, cellInfo);
+                }
+                return;
+            } else if (gameState.skillMode.type === 'mindclear') {
+                // 只能选择己方方块
+                if (playerId !== gameState.skillMode.targetPlayer) return;
+                if (gameState.players[playerId].board[row][col] === null || 
+                    gameState.players[playerId].board[row][col] === 0 || 
+                    gameState.players[playerId].board[row][col] === 50) return;
+                
+                // 执行心意消除
+                executeMindClear(playerId, row, col);
+                return;
+            }
+        }
+        
+        // 正常游戏模式
+        // 只有当前玩家才能操作自己的棋盘
+        if (playerId !== gameState.currentPlayer) return;
+        
+        const player = gameState.players[playerId];
+        // 行动力必须大于等于1才能进行操作
+        if (player.clicksLeft < 1) return;
+        
+        playSound('click');
+        
+        if (player.board[row][col] === null || player.board[row][col] === 0 || player.board[row][col] === 50) return;
+        
+        const oldValue = player.board[row][col];
+        const newValue = oldValue + 1;
+        player.board[row][col] = newValue;
+        
+        const cellElement = player.cellElements[row][col];
+        cellElement.textContent = newValue;
+        cellElement.setAttribute('data-value', newValue);
+        cellElement.classList.add('highlight');
+        
+        player.clicksLeft--;
+        updatePlayerDisplay(playerId);
+        updateCurrentPlayerUI();
+        
+        // 检查是否需要自动结束回合
+        setTimeout(() => {
+            checkAutoEndTurn();
+        }, 200);
+        
+        setTimeout(() => {
+            cellElement.classList.remove('highlight');
+            processConnectedGroups(playerId, row, col);
+        }, 150);
+    }
+
+    function updateAllDisplays() {
+        updatePlayerDisplay(1);
+        updatePlayerDisplay(2);
+        updatePlayersHP();
+    }
+
+    function updatePlayerDisplay(playerId) {
+        const player = gameState.players[playerId];
+        
+        // 更新行动力显示
+        const clicksElement = playerId === 1 ? player1ClicksLeft : player2ClicksLeft;
+        const progressElement = playerId === 1 ? player1ClicksProgress : player2ClicksProgress;
+        
+        clicksElement.textContent = player.clicksLeft.toFixed(1);
+        
+        const progressPercent = (player.clicksLeft / player.maxClicks) * 100;
+        progressElement.style.width = `${progressPercent}%`;
+        
+        if (progressPercent <= 20) {
+            progressElement.style.backgroundColor = '#ff5252';
+        } else if (progressPercent <= 60) {
+            progressElement.style.backgroundColor = '#ffd740';
+        } else {
+            progressElement.style.backgroundColor = '';
+        }
+        
+        // 移除伤害显示相关代码，因为现在是实时结算
+    }
+
+    function updatePlayersHP() {
+        // 更新玩家1
+        const player1 = gameState.players[1];
+        const hp1Percent = (player1.hp / player1.maxHp) * 100;
+        player1HpFill.style.width = `${hp1Percent}%`;
+        player1HpText.textContent = `${player1.hp} / ${player1.maxHp}`;
+        
+        // 更新玩家2
+        const player2 = gameState.players[2];
+        const hp2Percent = (player2.hp / player2.maxHp) * 100;
+        player2HpFill.style.width = `${hp2Percent}%`;
+        player2HpText.textContent = `${player2.hp} / ${player2.maxHp}`;
+    }
+
+    function updateCurrentPlayerUI() {
+        // 更新当前玩家高亮
+        if (gameState.currentPlayer === 1) {
+            player1Section.classList.add('active');
+            player2Section.classList.remove('active');
+            player1Info.classList.add('active');
+            player2Info.classList.remove('active');
+            
+            // 技能模式下不禁用对方棋盘
+            if (!gameState.skillMode.active) {
+                player1Section.classList.remove('disabled');
+                player2Section.classList.add('disabled');
+            } else {
+                player1Section.classList.remove('disabled');
+                player2Section.classList.remove('disabled');
+            }
+            
+            const timeText = gameState.isFirstTurn ? '(先手限时30秒)' : '';
+            currentTurnDisplay.className = 'current-turn player1';
+            currentTurnDisplay.innerHTML = `
+                <h3>玩家1 的回合</h3>
+                <p>轮到你行动了！${timeText}</p>
+                <div class="timer-display" id="timer-display">
+                    <span class="timer-label">剩余时间:</span>
+                    <span class="timer-value" id="timer-value">${gameState.timeLeft}</span>
+                    <span class="timer-unit">秒</span>
+                </div>
+            `;
+        } else {
+            player2Section.classList.add('active');
+            player1Section.classList.remove('active');
+            player2Info.classList.add('active');
+            player1Info.classList.remove('active');
+            
+            // 技能模式下不禁用对方棋盘
+            if (!gameState.skillMode.active) {
+                player2Section.classList.remove('disabled');
+                player1Section.classList.add('disabled');
+            } else {
+                player1Section.classList.remove('disabled');
+                player2Section.classList.remove('disabled');
+            }
+            
+            currentTurnDisplay.className = 'current-turn player2';
+            currentTurnDisplay.innerHTML = `
+                <h3>玩家2 的回合</h3>
+                <p>轮到你行动了！</p>
+                <div class="timer-display" id="timer-display">
+                    <span class="timer-label">剩余时间:</span>
+                    <span class="timer-value" id="timer-value">${gameState.timeLeft}</span>
+                    <span class="timer-unit">秒</span>
+                </div>
+            `;
+        }
+
+        // 重新获取更新后的timer元素
+        const newTimerDisplay = document.getElementById('timer-display');
+        const newTimerValue = document.getElementById('timer-value');
+        
+        // 更新timer样式
+        updateTimerDisplay(newTimerDisplay, newTimerValue);
+
+        // 重新启用结束回合按钮
+        endTurnButton.disabled = gameState.isEndingTurn || gameState.gameEnded || gameState.endTurnCooldown;
+
+        // 更新技能按钮和状态
+        updateSkillButtons();
+        updateHealStatus();
+
+        // 更新当前玩家棋盘的交互状态（只在非技能模式下）
+        if (!gameState.skillMode.active) {
+            const currentPlayer = gameState.players[gameState.currentPlayer];
+            const currentBoard = gameState.currentPlayer === 1 ? player1Board : player2Board;
+            const cells = currentBoard.querySelectorAll('.cell');
+            
+            if (currentPlayer.clicksLeft < 1) {
+                cells.forEach(cell => {
+                    if (!cell.classList.contains('empty')) {
+                        cell.classList.add('disabled');
+                    }
+                });
+            } else {
+                cells.forEach(cell => {
+                    cell.classList.remove('disabled');
+                });
+            }
+        }
+    }
+
+    function processConnectedGroups(playerId, clickedRow, clickedCol) {
+        const connectedGroups = findAllConnectedGroups(playerId);
+        
+        if (connectedGroups.length > 0) {
+            gameState.isAnimating = true;
+            processNextGroup(playerId, connectedGroups, 0, clickedRow, clickedCol);
+        }
+    }
+    
+    function processNextGroup(playerId, groups, index, clickedRow, clickedCol) {
+        if (index >= groups.length) {
+            setTimeout(() => {
+                applyGravity(playerId);
+            }, 50);
+            return;
+        }
+        
+        playSound('merge');
+        
+        const player = gameState.players[playerId];
+        const group = groups[index];
+        
+        if (group.length >= 3) {
+            const clickedInGroup = group.some(cell => cell.row === clickedRow && cell.col === clickedCol);
+            
+            let cellsToClear = [];
+            let targetCell = null;
+            
+            if (clickedInGroup) {
+                targetCell = group.find(cell => cell.row === clickedRow && cell.col === clickedCol);
+                cellsToClear = group.filter(cell => cell.row !== clickedRow || cell.col !== clickedCol);
+            } else {
+                targetCell = group[0];
+                for (const cell of group) {
+                    if (cell.row > targetCell.row || 
+                        (cell.row === targetCell.row && cell.col < targetCell.col)) {
+                        targetCell = cell;
+                    }
+                }
+                cellsToClear = group.filter(cell => cell.row !== targetCell.row || cell.col !== targetCell.col);
+            }
+            
+            const targetElement = player.cellElements[targetCell.row][targetCell.col];
+            const targetRect = targetElement.getBoundingClientRect();
+            
+            const baseValue = player.board[targetCell.row][targetCell.col];
+            const damageIncrease = baseValue * cellsToClear.length;
+            
+            // 检查奥丁祝福效果
+            const finalDamage = gameState.playerEffects[playerId].doubleDamage ? 
+                                damageIncrease * 2 : damageIncrease;
+            
+            // 创建飞向对手血条的方块效果
+            createFlyingBlocksToHPBar(playerId, cellsToClear, finalDamage);
+            
+            // 立即对对手造成伤害
+            const opponentPlayer = playerId === 1 ? 2 : 1;
+            const opponentData = gameState.players[opponentPlayer];
+            opponentData.hp = Math.max(0, opponentData.hp - finalDamage);
+            
+            // 播放伤害音效
+            playSound('damage');
+            
+            // 更新HP显示
+            updatePlayersHP();
+            
+            // 显示对目标格子的伤害数字动画（重用已存在的targetElement）
+            const localDamagePopup = document.createElement('div');
+            localDamagePopup.classList.add('damage-popup');
+            localDamagePopup.textContent = `+${finalDamage}`;
+            localDamagePopup.style.left = `${targetRect.left}px`;
+            localDamagePopup.style.top = `${targetRect.top - 30}px`;
+            localDamagePopup.style.color = '#4caf50'; // 绿色表示获得分数
+            
+            // 奥丁祝福特效
+            if (gameState.playerEffects[playerId].doubleDamage) {
+                localDamagePopup.style.color = '#ffd700';
+                localDamagePopup.style.textShadow = '0 0 10px rgba(255, 215, 0, 0.8)';
+                localDamagePopup.style.fontSize = '2.2rem';
+                localDamagePopup.textContent = `+${finalDamage} ⚡`;
+            }
+            
+            document.body.appendChild(localDamagePopup);
+            
+            setTimeout(() => {
+                localDamagePopup.classList.add('fade-up');
+                setTimeout(() => {
+                    if (localDamagePopup && document.body.contains(localDamagePopup)) {
+                        document.body.removeChild(localDamagePopup);
+                    }
+                }, 1000);
+            }, 10);
+            
+            // HP动画效果
+            const opponentHpFill = opponentPlayer === 1 ? player1HpFill : player2HpFill;
+            opponentHpFill.classList.add('hp-damage');
+            setTimeout(() => {
+                opponentHpFill.classList.remove('hp-damage');
+            }, 500);
+            
+            // 检查是否游戏结束
+            if (opponentData.hp <= 0) {
+                gameState.gameEnded = true;
+                gameState.isEndingTurn = false;
+                // 清除计时器
+                if (gameState.turnTimer) {
+                    clearInterval(gameState.turnTimer);
+                    gameState.turnTimer = null;
+                }
+                setTimeout(() => {
+                    showGameEndModal(playerId);
+                }, 1000);
+                return;
+            }
+            
+            processCellsSequentially(playerId, cellsToClear, 0, targetCell, targetRect, () => {
+                setTimeout(() => {
+                    player.board[targetCell.row][targetCell.col]++;
+                    updateCellDisplay(playerId, targetCell.row, targetCell.col);
+                    
+                    // 每次消除回复0.5行动力
+                    player.clicksLeft = Math.min(player.clicksLeft + 0.5, player.maxClicks);
+                    updatePlayerDisplay(playerId);
+                    updateCurrentPlayerUI();
+                    
+                    setTimeout(() => {
+                        setTimeout(() => {
+                            processNextGroup(playerId, groups, index + 1, clickedRow, clickedCol);
+                        }, 50);
+                    }, 50);
+                }, 50);
+            });
+        } else {
+            processNextGroup(playerId, groups, index + 1, clickedRow, clickedCol);
+        }
+    }
+
+    // 创建飞向对手血条的方块动画
+    function createFlyingBlocksToHPBar(fromPlayerId, cellsToClear, totalDamage) {
+        const opponentPlayerId = fromPlayerId === 1 ? 2 : 1;
+        const opponentHpBar = opponentPlayerId === 1 ? player1Info.querySelector('.hp-bar') : player2Info.querySelector('.hp-bar');
+        const opponentBoard = opponentPlayerId === 1 ? player1Board : player2Board;
+        const opponentRect = opponentHpBar.getBoundingClientRect();
+        
+        cellsToClear.forEach((cell, index) => {
+            setTimeout(() => {
+                const player = gameState.players[fromPlayerId];
+                const cellElement = player.cellElements[cell.row][cell.col];
+                const cellRect = cellElement.getBoundingClientRect();
+                
+                // 创建飞行的方块
+                const flyingBlock = document.createElement('div');
+                flyingBlock.className = 'flying-block cell';
+                flyingBlock.textContent = player.board[cell.row][cell.col];
+                flyingBlock.setAttribute('data-value', player.board[cell.row][cell.col]);
+                
+                // 设置初始位置和样式
+                flyingBlock.style.left = `${cellRect.left}px`;
+                flyingBlock.style.top = `${cellRect.top}px`;
+                flyingBlock.style.width = `${cellRect.width}px`;
+                flyingBlock.style.height = `${cellRect.height}px`;
+                flyingBlock.style.fontSize = window.getComputedStyle(cellElement).fontSize;
+                
+                document.body.appendChild(flyingBlock);
+                
+                // 飞向对手血条（更快的速度）
+                setTimeout(() => {
+                    flyingBlock.style.left = `${opponentRect.left + opponentRect.width / 2 - cellRect.width / 2}px`;
+                    flyingBlock.style.top = `${opponentRect.top + opponentRect.height / 2 - cellRect.height / 2}px`;
+                    flyingBlock.style.transform = 'scale(0.5)';
+                    flyingBlock.style.opacity = '0.8';
+                }, 30);
+                
+                // 动画结束后移除并显示伤害数字
+                setTimeout(() => {
+                    if (document.body.contains(flyingBlock)) {
+                        document.body.removeChild(flyingBlock);
+                    }
+                    
+                    // 震动对手的棋盘
+                    opponentBoard.classList.add('shake');
+                    setTimeout(() => {
+                        opponentBoard.classList.remove('shake');
+                    }, 400);
+                    
+                    // 最后一个方块到达时显示总伤害
+                    if (index === cellsToClear.length - 1) {
+                        const damagePopup = document.createElement('div');
+                        damagePopup.classList.add('damage-popup');
+                        damagePopup.textContent = `-${totalDamage}`;
+                        damagePopup.style.left = `${opponentRect.left + opponentRect.width / 2}px`;
+                        damagePopup.style.top = `${opponentRect.top - 20}px`;
+                        damagePopup.style.color = '#f44336';
+                        damagePopup.style.fontSize = '1.8rem';
+                        damagePopup.style.transform = 'translateX(-50%)';
+                        document.body.appendChild(damagePopup);
+                        
+                        setTimeout(() => {
+                            damagePopup.classList.add('fade-up');
+                            setTimeout(() => {
+                                if (damagePopup && document.body.contains(damagePopup)) {
+                                    document.body.removeChild(damagePopup);
+                                }
+                            }, 1000);
+                        }, 10);
+                    }
+                }, 530); // 减少等待时间，让震动更快出现
+            }, index * 60); // 减少间隔时间，让方块飞得更快更连续
+        });
+    }
+    
+    function processCellsSequentially(playerId, cells, index, targetCell, targetRect, onComplete) {
+        if (index >= cells.length) {
+            onComplete();
+            return;
+        }
+        
+        const player = gameState.players[playerId];
+        const cell = cells[index];
+        const cellElement = player.cellElements[cell.row][cell.col];
+        const cellRect = cellElement.getBoundingClientRect();
+        
+        const clone = cellElement.cloneNode(true);
+        clone.classList.add('cell-clone');
+        clone.style.width = `${cellRect.width}px`;
+        clone.style.height = `${cellRect.height}px`;
+        clone.style.left = `${cellRect.left}px`;
+        clone.style.top = `${cellRect.top}px`;
+        document.body.appendChild(clone);
+        
+        const path = findPath(playerId, cell, targetCell);
+        const finalPos = calculateFinalPosition(cell, targetCell, targetRect);
+        
+        player.board[cell.row][cell.col] = null;
+        updateCellDisplay(playerId, cell.row, cell.col);
+        
+        if (path && path.length > 0) {
+            animatePath(clone, path, finalPos, () => {
+                if (clone && document.body.contains(clone)) {
+                    document.body.removeChild(clone);
+                }
+                setTimeout(() => {
+                    processCellsSequentially(playerId, cells, index + 1, targetCell, targetRect, onComplete);
+                }, 50);
+            });
+        } else {
+            clone.classList.add('vanish');
+            setTimeout(() => {
+                if (clone && document.body.contains(clone)) {
+                    document.body.removeChild(clone);
+                }
+                setTimeout(() => {
+                    processCellsSequentially(playerId, cells, index + 1, targetCell, targetRect, onComplete);
+                }, 50);
+            }, 80);
+        }
+    }
+
+    function updateCellDisplay(playerId, row, col) {
+        const player = gameState.players[playerId];
+        const cell = player.cellElements[row][col];
+        const value = player.board[row][col];
+        
+        if (value !== null) {
+            cell.textContent = value;
+            cell.setAttribute('data-value', value);
+            cell.classList.remove('empty');
+        } else {
+            cell.textContent = '';
+            cell.removeAttribute('data-value');
+            cell.classList.add('empty');
+        }
+    }
+
+    function calculateFinalPosition(cell, targetCell, targetRect) {
+        const offset = 20;
+        
+        if (cell.row < targetCell.row) {
+            return {
+                x: targetRect.left + targetRect.width / 2,
+                y: targetRect.top - offset
+            };
+        } else if (cell.row > targetCell.row) {
+            return {
+                x: targetRect.left + targetRect.width / 2,
+                y: targetRect.bottom + offset
+            };
+        } else if (cell.col < targetCell.col) {
+            return {
+                x: targetRect.left - offset,
+                y: targetRect.top + targetRect.height / 2
+            };
+        } else {
+            return {
+                x: targetRect.right + offset,
+                y: targetRect.top + targetRect.height / 2
+            };
+        }
+    }
+
+    function findAllConnectedGroups(playerId) {
+        const player = gameState.players[playerId];
+        const visited = Array(gameState.boardSize).fill().map(() => Array(gameState.boardSize).fill(false));
+        const groups = [];
+        
+        for (let i = 0; i < gameState.boardSize; i++) {
+            for (let j = 0; j < gameState.boardSize; j++) {
+                if (!visited[i][j] && player.board[i][j] !== null && player.board[i][j] !== 0 && player.board[i][j] !== 50) {
+                    const group = [];
+                    const value = player.board[i][j];
+                    
+                    const queue = [{row: i, col: j}];
+                    visited[i][j] = true;
+                    
+                    while (queue.length > 0) {
+                        const cell = queue.shift();
+                        group.push(cell);
+                        
+                        const directions = [
+                            {row: cell.row - 1, col: cell.col},
+                            {row: cell.row + 1, col: cell.col},
+                            {row: cell.row, col: cell.col - 1},
+                            {row: cell.row, col: cell.col + 1}
+                        ];
+                        
+                        for (const dir of directions) {
+                            const {row, col} = dir;
+                            
+                            if (row >= 0 && row < gameState.boardSize && 
+                                col >= 0 && col < gameState.boardSize && 
+                                !visited[row][col] && 
+                                player.board[row][col] === value) {
+                                
+                                visited[row][col] = true;
+                                queue.push({row, col});
+                            }
+                        }
+                    }
+                    
+                    if (group.length >= 3) {
+                        groups.push(group);
+                    }
+                }
+            }
+        }
+        
+        return groups;
+    }
+
+    function hasConnectedGroups(playerId) {
+        return findAllConnectedGroups(playerId).length > 0;
+    }
+
+    function applyGravity(playerId) {
+        const player = gameState.players[playerId];
+        let hasFalling = false;
+        const movingCells = [];
+        const newCells = [];
+        
+        for (let col = 0; col < gameState.boardSize; col++) {
+            for (let row = gameState.boardSize - 1; row > 0; row--) {
+                if (player.board[row][col] === null) {
+                    let sourceRow = row - 1;
+                    while (sourceRow >= 0 && player.board[sourceRow][col] === null) {
+                        sourceRow--;
+                    }
+                    
+                    if (sourceRow >= 0) {
+                        movingCells.push({
+                            fromRow: sourceRow,
+                            fromCol: col,
+                            toRow: row,
+                            toCol: col,
+                            value: player.board[sourceRow][col]
+                        });
+                        
+                        player.board[row][col] = player.board[sourceRow][col];
+                        player.board[sourceRow][col] = null;
+                        hasFalling = true;
+                    }
+                }
+            }
+        }
+        
+        for (let col = 0; col < gameState.boardSize; col++) {
+            if (player.board[0][col] === null) {
+                const newValue = Math.floor(Math.random() * 5) + 1;
+                player.board[0][col] = newValue;
+                newCells.push({
+                    row: 0,
+                    col: col,
+                    value: newValue
+                });
+                hasFalling = true;
+            }
+        }
+        
+        if (movingCells.length > 0 || newCells.length > 0) {
+            movingCells.forEach(move => {
+                const fromCell = player.cellElements[move.fromRow][move.fromCol];
+                const toCell = player.cellElements[move.toRow][move.toCol];
+                
+                const fromRect = fromCell.getBoundingClientRect();
+                const toRect = toCell.getBoundingClientRect();
+                
+                const clone = fromCell.cloneNode(true);
+                clone.style.position = 'absolute';
+                clone.style.zIndex = '100';
+                clone.style.left = `${fromRect.left}px`;
+                clone.style.top = `${fromRect.top}px`;
+                clone.style.width = `${fromRect.width}px`;
+                clone.style.height = `${fromRect.height}px`;
+                clone.style.transition = 'top 0.25s ease-in';
+                document.body.appendChild(clone);
+                
+                fromCell.textContent = '';
+                fromCell.removeAttribute('data-value');
+                fromCell.classList.add('empty');
+                
+                setTimeout(() => {
+                    clone.style.top = `${toRect.top}px`;
+                    
+                    setTimeout(() => {
+                        if (clone && document.body.contains(clone)) {
+                            document.body.removeChild(clone);
+                        }
+                        updateCellDisplay(playerId, move.toRow, move.toCol);
+                    }, 250);
+                }, 25);
+            });
+            
+            newCells.forEach(newCell => {
+                updateCellDisplay(playerId, newCell.row, newCell.col);
+            });
+            
+            setTimeout(() => {
+                if (hasFalling) {
+                    applyGravity(playerId);
+                } else {
+                    checkForNewConnectedGroups(playerId);
+                }
+            }, 300);
+        } else {
+            checkForNewConnectedGroups(playerId);
+        }
+    }
+    
+    function checkForNewConnectedGroups(playerId) {
+        const newGroups = findAllConnectedGroups(playerId);
+        if (newGroups.length > 0) {
+            const player = gameState.players[playerId];
+            for (const group of newGroups) {
+                for (const cell of group) {
+                    const cellElement = player.cellElements[cell.row][cell.col];
+                    cellElement.classList.add('new-connected');
+                }
+            }
+            
+            setTimeout(() => {
+                const player = gameState.players[playerId];
+                for (let i = 0; i < gameState.boardSize; i++) {
+                    for (let j = 0; j < gameState.boardSize; j++) {
+                        player.cellElements[i][j].classList.remove('new-connected');
+                    }
+                }
+                
+                processConnectedGroups(playerId, -1, -1);
+            }, 400);
+        } else {
+            gameState.isAnimating = false;
+        }
+    }
+
+    function findPath(playerId, startCell, targetCell) {
+        const player = gameState.players[playerId];
+        const directions = [
+            { row: -1, col: 0 },
+            { row: 0, col: 1 },
+            { row: 1, col: 0 },
+            { row: 0, col: -1 }
+        ];
+        
+        const queue = [{ row: startCell.row, col: startCell.col, path: [] }];
+        const visited = Array(gameState.boardSize).fill().map(() => Array(gameState.boardSize).fill(false));
+        visited[startCell.row][startCell.col] = true;
+        
+        while (queue.length > 0) {
+            const current = queue.shift();
+            
+            if ((Math.abs(current.row - targetCell.row) === 1 && current.col === targetCell.col) || 
+                (Math.abs(current.col - targetCell.col) === 1 && current.row === targetCell.row)) {
+                return [...current.path, { row: current.row, col: current.col }];
+            }
+            
+            for (const dir of directions) {
+                const newRow = current.row + dir.row;
+                const newCol = current.col + dir.col;
+                
+                if (newRow >= 0 && newRow < gameState.boardSize && 
+                    newCol >= 0 && newCol < gameState.boardSize && 
+                    !visited[newRow][newCol]) {
+                    
+                    if (player.board[newRow][newCol] === null || 
+                        (newRow === targetCell.row && newCol === targetCell.col)) {
+                        
+                        visited[newRow][newCol] = true;
+                        
+                        queue.push({
+                            row: newRow,
+                            col: newCol,
+                            path: [...current.path, { row: current.row, col: current.col }]
+                        });
+                    }
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    function animatePath(element, path, finalPos, callback) {
+        const duration = 25;
+        let step = 0;
+        
+        const positions = path.map(point => {
+            // 这里需要根据playerId来获取正确的cellElements
+            // 由于我们在动画中丢失了playerId信息，我们需要从元素中推断
+            const playerSections = document.querySelectorAll('.player-section');
+            let targetPlayer = null;
+            
+            playerSections.forEach(section => {
+                const board = section.querySelector('.game-board');
+                const cells = board.querySelectorAll('.cell');
+                cells.forEach(cell => {
+                    if (parseInt(cell.dataset.row) === point.row && 
+                        parseInt(cell.dataset.col) === point.col) {
+                        targetPlayer = parseInt(cell.dataset.player);
+                    }
+                });
+            });
+            
+            if (targetPlayer) {
+                const player = gameState.players[targetPlayer];
+                const cell = player.cellElements[point.row][point.col];
+                const rect = cell.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+            }
+            return { x: 0, y: 0 };
+        });
+        
+        positions.push(finalPos);
+        
+        function nextStep() {
+            if (step < positions.length) {
+                const pos = positions[step];
+                const elementWidth = parseInt(element.style.width);
+                const elementHeight = parseInt(element.style.height);
+                
+                element.style.left = `${pos.x - elementWidth / 2}px`;
+                element.style.top = `${pos.y - elementHeight / 2}px`;
+                
+                step++;
+                setTimeout(nextStep, duration);
+            } else {
+                element.classList.add('vanish');
+                setTimeout(callback, 80);
+            }
+        }
+        
+        setTimeout(nextStep, 5);
+    }
+
+    function getMaxValueOnBoard(playerId) {
+        const player = gameState.players[playerId];
+        let maxValue = 0;
+        
+        for (let i = 0; i < gameState.boardSize; i++) {
+            for (let j = 0; j < gameState.boardSize; j++) {
+                if (player.board[i][j] !== null && player.board[i][j] !== 0 && player.board[i][j] !== 50 && player.board[i][j] > maxValue) {
+                    maxValue = player.board[i][j];
+                }
+            }
+        }
+        
+        return maxValue || 1; // 如果没有找到任何数字，默认返回1
+    }
+
+    // 技能悬停提示功能
+    function showSkillTooltip(button) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'skill-tooltip';
+        tooltip.textContent = button.title;
+        
+        const rect = button.getBoundingClientRect();
+        tooltip.style.left = `${rect.left + rect.width / 2}px`;
+        tooltip.style.top = `${rect.bottom + 5}px`;
+        tooltip.style.transform = 'translateX(-50%)';
+        
+        document.body.appendChild(tooltip);
+        skillTooltip = tooltip;
+        
+        setTimeout(() => {
+            tooltip.classList.add('show');
+        }, 10);
+    }
+    
+    function hideSkillTooltip() {
+        if (skillTooltip && document.body.contains(skillTooltip)) {
+            skillTooltip.classList.remove('show');
+            setTimeout(() => {
+                if (skillTooltip && document.body.contains(skillTooltip)) {
+                    document.body.removeChild(skillTooltip);
+                }
+                skillTooltip = null;
+            }, 300);
+        }
+    }
+
+    // 技能系统
+    function handleSkillClick(button) {
+        if (gameState.gameEnded || gameState.isEndingTurn) return;
+        
+        const skillType = button.dataset.skill;
+        const cost = parseInt(button.dataset.cost);
+        const playerId = gameState.currentPlayer;
+        
+        const player = gameState.players[playerId];
+        
+        // 检查血量是否足够
+        if (player.hp <= cost) {
+            showMessage('血量不足！', 'error');
+            return;
+        }
+        
+        // 检查特殊条件
+        if (skillType === 'breakthrough' && gameState.turnCount < 4) {
+            showMessage('搏命突围需要第4回合后才能使用！', 'error');
+            return;
+        }
+        
+        // 使用高消耗技能时获得时间加成
+        if (cost >= 200) {
+            const timeBonus = Math.floor(gameState.timeLeft);
+            gameState.timeLeft += timeBonus;
+            updateTimerDisplay();
+            showMessage(`高消耗技能！剩余时间翻倍：+${timeBonus}秒`, 'success');
+        }
+        
+        // 执行技能
+        switch (skillType) {
+            case 'swap':
+                activateSwapSkill(playerId, cost);
+                break;
+            case 'modify':
+                activateModifySkill(playerId, cost);
+                break;
+            case 'block':
+                activateBlockSkill(playerId, cost);
+                break;
+            case 'destroy':
+                activateDestroySkill(playerId, cost);
+                break;
+            case 'breakthrough':
+                activateBreakthroughSkill(playerId, cost);
+                break;
+            case 'sacrifice':
+                activateSacrificeSkill(playerId, cost);
+                break;
+            case 'mindclear':
+                activateMindClearSkill(playerId, cost);
+                break;
+            case 'odin':
+                activateOdinSkill(playerId, cost);
+                break;
+        }
+    }
+
+    function activateDestroySkill(playerId, cost) {
+        // 扣除血量
+        gameState.players[playerId].hp -= cost;
+        updatePlayersHP();
+        showHealAnimation(playerId, -cost);
+        
+        // 检查是否因技能消耗血量而死亡
+        if (gameState.players[playerId].hp <= 0) {
+            gameState.gameEnded = true;
+            const winnerId = playerId === 1 ? 2 : 1;
+            setTimeout(() => {
+                showGameEndModal(winnerId);
+            }, 500);
+            return;
+        }
+        
+        // 随机选择对手的一个方块变成50
+        const opponentId = playerId === 1 ? 2 : 1;
+        const opponent = gameState.players[opponentId];
+        const availableCells = [];
+        
+        for (let i = 0; i < gameState.boardSize; i++) {
+            for (let j = 0; j < gameState.boardSize; j++) {
+                if (opponent.board[i][j] !== null && opponent.board[i][j] !== 0 && opponent.board[i][j] !== 50) {
+                    availableCells.push({row: i, col: j});
+                }
+            }
+        }
+        
+        if (availableCells.length > 0) {
+            const randomCell = availableCells[Math.floor(Math.random() * availableCells.length)];
+            opponent.board[randomCell.row][randomCell.col] = 50;
+            updateCellDisplay(opponentId, randomCell.row, randomCell.col);
+            
+            // 添加特殊效果
+            const cellElement = opponent.cellElements[randomCell.row][randomCell.col];
+            cellElement.classList.add('highlight');
+            
+            setTimeout(() => {
+                cellElement.classList.remove('highlight');
+            }, 500);
+            
+            updateSkillButtons();
+            showMessage('对手的一个方块被挑衅变成50了！', 'success');
+            playSound('damage');
+        } else {
+            showMessage('对手没有可挑衅的方块！', 'error');
+        }
+    }
+
+    function activateBreakthroughSkill(playerId, cost) {
+        // 扣除血量
+        gameState.players[playerId].hp -= cost;
+        updatePlayersHP();
+        showHealAnimation(playerId, -cost);
+        
+        // 检查是否因技能消耗血量而死亡
+        if (gameState.players[playerId].hp <= 0) {
+            gameState.gameEnded = true;
+            const winnerId = playerId === 1 ? 2 : 1;
+            setTimeout(() => {
+                showGameEndModal(winnerId);
+            }, 500);
+            return;
+        }
+        
+        const player = gameState.players[playerId];
+        let modifiedCount = 0;
+        
+        // 将所有小于4的方块变成4（不包括特殊方块）
+        for (let i = 0; i < gameState.boardSize; i++) {
+            for (let j = 0; j < gameState.boardSize; j++) {
+                if (player.board[i][j] !== null && player.board[i][j] !== 0 && player.board[i][j] !== 50 && player.board[i][j] < 4) {
+                    player.board[i][j] = 4;
+                    updateCellDisplay(playerId, i, j);
+                    
+                    // 添加突围动画
+                    const cellElement = player.cellElements[i][j];
+                    cellElement.classList.add('highlight');
+                    setTimeout(() => {
+                        cellElement.classList.remove('highlight');
+                    }, 300);
+                    
+                    modifiedCount++;
+                }
+            }
+        }
+        
+        // 恢复满行动力
+        player.clicksLeft = player.maxClicks;
+        updatePlayerDisplay(playerId);
+        updateCurrentPlayerUI();
+        updateSkillButtons();
+        
+        showMessage(`搏命突围成功！${modifiedCount}个方块变成4，行动力已恢复！`, 'success');
+        playSound('heal');
+    }
+
+    function activateSacrificeSkill(playerId, cost) {
+        // 扣除血量
+        gameState.players[playerId].hp -= cost;
+        updatePlayersHP();
+        showHealAnimation(playerId, -cost);
+        
+        // 检查是否因技能消耗血量而死亡
+        if (gameState.players[playerId].hp <= 0) {
+            gameState.gameEnded = true;
+            const winnerId = playerId === 1 ? 2 : 1;
+            setTimeout(() => {
+                showGameEndModal(winnerId);
+            }, 500);
+            return;
+        }
+        
+        // 增加1点行动力（不超过上限）
+        const player = gameState.players[playerId];
+        const oldActionPoints = player.clicksLeft;
+        player.clicksLeft = Math.min(player.clicksLeft + 1, player.maxClicks);
+        const actualGain = player.clicksLeft - oldActionPoints;
+        
+        updatePlayerDisplay(playerId);
+        updateCurrentPlayerUI();
+        updateSkillButtons();
+        
+        if (actualGain > 0) {
+            showMessage(`苦肉成功！获得${actualGain}点行动力！`, 'success');
+            
+            // 显示行动力增加动画
+            const playerInfo = playerId === 1 ? player1Info : player2Info;
+            const rect = playerInfo.getBoundingClientRect();
+            const gainPopup = document.createElement('div');
+            gainPopup.classList.add('heal-popup');
+            gainPopup.textContent = `+${actualGain}行动力`;
+            gainPopup.style.left = `${rect.left + rect.width / 2}px`;
+            gainPopup.style.top = `${rect.top + 60}px`;
+            gainPopup.style.transform = 'translateX(-50%)';
+            gainPopup.style.color = '#2196f3';
+            document.body.appendChild(gainPopup);
+            
+            setTimeout(() => {
+                gainPopup.classList.add('fade-up');
+                setTimeout(() => {
+                    if (gainPopup && document.body.contains(gainPopup)) {
+                        document.body.removeChild(gainPopup);
+                    }
+                }, 1000);
+            }, 10);
+            
+            playSound('heal');
+        } else {
+            showMessage('行动力已满，苦肉无效果！', 'error');
+        }
+    }
+
+    function activateMindClearSkill(playerId, cost) {
+        if (gameState.skillMode.active) {
+            cancelSkillMode();
+            return;
+        }
+        
+        // 扣除血量
+        gameState.players[playerId].hp -= cost;
+        updatePlayersHP();
+        showHealAnimation(playerId, -cost);
+        
+        // 检查是否因技能消耗血量而死亡
+        if (gameState.players[playerId].hp <= 0) {
+            gameState.gameEnded = true;
+            const winnerId = playerId === 1 ? 2 : 1;
+            setTimeout(() => {
+                showGameEndModal(winnerId);
+            }, 500);
+            return;
+        }
+        
+        // 进入心意消除模式
+        gameState.skillMode = {
+            active: true,
+            type: 'mindclear',
+            selectedCells: [],
+            targetPlayer: playerId
+        };
+        
+        // 高亮可选择的己方方块
+        highlightMindClearCells(playerId);
+        updateSkillButtons();
+        updateCurrentPlayerUI(); // 刷新UI状态
+        showMessage('选择己方一个方块，所有相同数值的方块将被消除', 'info');
+    }
+
+    function highlightMindClearCells(playerId) {
+        const player = gameState.players[playerId];
+        for (let i = 0; i < gameState.boardSize; i++) {
+            for (let j = 0; j < gameState.boardSize; j++) {
+                if (player.board[i][j] !== null && player.board[i][j] !== 0 && player.board[i][j] !== 50) {
+                    player.cellElements[i][j].classList.add('skill-selectable');
+                }
+            }
+        }
+    }
+
+    function executeMindClear(playerId, row, col) {
+        const player = gameState.players[playerId];
+        const targetValue = player.board[row][col];
+        
+        if (targetValue === null || targetValue === 0 || targetValue === 50) {
+            cancelSkillMode();
+            return;
+        }
+        
+        // 找到所有相同数值的方块
+        const sameCells = [];
+        for (let i = 0; i < gameState.boardSize; i++) {
+            for (let j = 0; j < gameState.boardSize; j++) {
+                if (player.board[i][j] === targetValue) {
+                    sameCells.push({row: i, col: j});
+                }
+            }
+        }
+        
+        if (sameCells.length === 0) {
+            cancelSkillMode();
+            return;
+        }
+        
+        // 计算伤害：数值 × 方块数量
+        const baseDamage = targetValue * sameCells.length;
+        const finalDamage = gameState.playerEffects[playerId].doubleDamage ? 
+                           baseDamage * 2 : baseDamage;
+        
+        // 创建飞向对手血条的效果
+        createFlyingBlocksToHPBar(playerId, sameCells, finalDamage);
+        
+        // 对对手造成伤害
+        const opponentId = playerId === 1 ? 2 : 1;
+        const opponent = gameState.players[opponentId];
+        opponent.hp = Math.max(0, opponent.hp - finalDamage);
+        
+        // 播放伤害音效
+        playSound('damage');
+        
+        // 更新HP显示
+        updatePlayersHP();
+        
+        // HP动画效果
+        const opponentHpFill = opponentId === 1 ? player1HpFill : player2HpFill;
+        opponentHpFill.classList.add('hp-damage');
+        setTimeout(() => {
+            opponentHpFill.classList.remove('hp-damage');
+        }, 500);
+        
+        // 消除方块并添加特效
+        sameCells.forEach((cell, index) => {
+            setTimeout(() => {
+                player.board[cell.row][cell.col] = null;
+                updateCellDisplay(playerId, cell.row, cell.col);
+                
+                const cellElement = player.cellElements[cell.row][cell.col];
+                cellElement.classList.add('pulse');
+                
+                setTimeout(() => {
+                    cellElement.classList.remove('pulse');
+                }, 150);
+            }, index * 50); // 错开消除时间
+        });
+        
+        // 检查游戏是否结束
+        if (opponent.hp <= 0) {
+            gameState.gameEnded = true;
+            gameState.isEndingTurn = false;
+            if (gameState.turnTimer) {
+                clearInterval(gameState.turnTimer);
+                gameState.turnTimer = null;
+            }
+            setTimeout(() => {
+                showGameEndModal(playerId);
+            }, 1000);
+            return;
+        }
+        
+        // 显示效果信息
+        const doubleText = gameState.playerEffects[playerId].doubleDamage ? " (翻倍!)" : "";
+        showMessage(`心意消除成功！消除${sameCells.length}个数值${targetValue}的方块，造成${finalDamage}伤害${doubleText}！`, 'success');
+        
+        // 延迟应用重力
+        setTimeout(() => {
+            applyGravity(playerId);
+        }, sameCells.length * 50 + 200);
+        
+        cancelSkillMode();
+        updateSkillButtons();
+    }
+
+    function activateOdinSkill(playerId, cost) {
+        // 扣除血量
+        gameState.players[playerId].hp -= cost;
+        updatePlayersHP();
+        showHealAnimation(playerId, -cost);
+        
+        // 检查是否因技能消耗血量而死亡
+        if (gameState.players[playerId].hp <= 0) {
+            gameState.gameEnded = true;
+            const winnerId = playerId === 1 ? 2 : 1;
+            setTimeout(() => {
+                showGameEndModal(winnerId);
+            }, 500);
+            return;
+        }
+        
+        // 激活本回合攻击力翻倍效果
+        gameState.playerEffects[playerId].doubleDamage = true;
+        
+        updateHealStatus();
+        updateSkillButtons();
+        showMessage('奥丁祝福激活！本回合所有攻击伤害翻倍！', 'success');
+        playSound('heal');
+        
+        // 添加视觉效果
+        const playerBoard = playerId === 1 ? player1Board : player2Board;
+        playerBoard.style.boxShadow = '0 0 20px rgba(255, 215, 0, 0.8)';
+        playerBoard.style.border = '3px solid #ffd700';
+        
+        setTimeout(() => {
+            playerBoard.style.boxShadow = '';
+            playerBoard.style.border = '';
+        }, 1000);
+    }
+
+    function activateSwapSkill(playerId, cost) {
+        if (gameState.skillMode.active) {
+            cancelSkillMode();
+            return;
+        }
+        
+        // 扣除血量
+        gameState.players[playerId].hp -= cost;
+        updatePlayersHP();
+        showHealAnimation(playerId, -cost);
+        
+        // 检查是否因技能消耗血量而死亡
+        if (gameState.players[playerId].hp <= 0) {
+            gameState.gameEnded = true;
+            const winnerId = playerId === 1 ? 2 : 1;
+            setTimeout(() => {
+                showGameEndModal(winnerId);
+            }, 500);
+            return;
+        }
+        
+        // 进入交换模式
+        gameState.skillMode = {
+            active: true,
+            type: 'swap',
+            selectedCells: [],
+            targetPlayer: null
+        };
+        
+        // 高亮所有可选择的方块
+        highlightSwappableCells();
+        updateSkillButtons();
+        updateCurrentPlayerUI(); // 刷新UI状态，解除对方棋盘的禁用
+        showMessage('选择两个方块进行交换（包括对手的方块）', 'info');
+    }
+
+    function activateModifySkill(playerId, cost) {
+        showModifySkillModal(playerId, cost);
+    }
+
+    function activateBlockSkill(playerId, cost) {
+        // 扣除血量
+        gameState.players[playerId].hp -= cost;
+        updatePlayersHP();
+        showHealAnimation(playerId, -cost);
+        
+        // 检查是否因技能消耗血量而死亡
+        if (gameState.players[playerId].hp <= 0) {
+            gameState.gameEnded = true;
+            const winnerId = playerId === 1 ? 2 : 1;
+            setTimeout(() => {
+                showGameEndModal(winnerId);
+            }, 500);
+            return;
+        }
+        
+        // 禁用对手回血20回合
+        const opponentId = playerId === 1 ? 2 : 1;
+        gameState.playerEffects[opponentId].healBlocked = true;
+        gameState.playerEffects[opponentId].healBlockTurns = 20;
+        
+        updateHealStatus();
+        updateSkillButtons();
+        showMessage(`对手的回血功能被禁用20回合！`, 'success');
+        playSound('damage');
+    }
+
+    function highlightSwappableCells() {
+        // 高亮所有玩家的方块（包括值为0的方块）
+        for (let pid = 1; pid <= 2; pid++) {
+            const player = gameState.players[pid];
+            for (let i = 0; i < gameState.boardSize; i++) {
+                for (let j = 0; j < gameState.boardSize; j++) {
+                    if (player.board[i][j] !== null) {
+                        player.cellElements[i][j].classList.add('skill-selectable');
+                    }
+                }
+            }
+        }
+    }
+
+    function cancelSkillMode() {
+        gameState.skillMode = {
+            active: false,
+            type: null,
+            selectedCells: [],
+            targetPlayer: null
+        };
+        
+        // 移除高亮
+        for (let pid = 1; pid <= 2; pid++) {
+            const player = gameState.players[pid];
+            for (let i = 0; i < gameState.boardSize; i++) {
+                for (let j = 0; j < gameState.boardSize; j++) {
+                    player.cellElements[i][j].classList.remove('skill-selectable', 'skill-selected');
+                }
+            }
+        }
+        
+        updateSkillButtons();
+        updateCurrentPlayerUI(); // 恢复正常的UI状态
+    }
+
+    function executeSwap(cell1, cell2) {
+        const player1 = gameState.players[cell1.playerId];
+        const player2 = gameState.players[cell2.playerId];
+        
+        // 交换数值
+        const temp = player1.board[cell1.row][cell1.col];
+        player1.board[cell1.row][cell1.col] = player2.board[cell2.row][cell2.col];
+        player2.board[cell2.row][cell2.col] = temp;
+        
+        // 更新显示
+        updateCellDisplay(cell1.playerId, cell1.row, cell1.col);
+        updateCellDisplay(cell2.playerId, cell2.row, cell2.col);
+        
+        // 添加交换动画效果
+        const element1 = player1.cellElements[cell1.row][cell1.col];
+        const element2 = player2.cellElements[cell2.row][cell2.col];
+        
+        element1.classList.add('highlight');
+        element2.classList.add('highlight');
+        
+        setTimeout(() => {
+            element1.classList.remove('highlight');
+            element2.classList.remove('highlight');
+        }, 300);
+        
+        cancelSkillMode();
+        showMessage('交换完成！', 'success');
+        playSound('merge');
+    }
+
+    function updateHealStatus() {
+        const player1Status = document.getElementById('player1-heal-status');
+        const player2Status = document.getElementById('player2-heal-status');
+        
+        // 玩家1状态
+        let p1Status = '';
+        if (gameState.playerEffects[1].healBlocked) {
+            p1Status += `回血被禁用 (${gameState.playerEffects[1].healBlockTurns}回合)`;
+        }
+        if (gameState.playerEffects[1].doubleDamage) {
+            if (p1Status) p1Status += ' | ';
+            p1Status += '攻击力翻倍 ⚡';
+        }
+        player1Status.textContent = p1Status;
+        
+        // 玩家2状态
+        let p2Status = '';
+        if (gameState.playerEffects[2].healBlocked) {
+            p2Status += `回血被禁用 (${gameState.playerEffects[2].healBlockTurns}回合)`;
+        }
+        if (gameState.playerEffects[2].doubleDamage) {
+            if (p2Status) p2Status += ' | ';
+            p2Status += '攻击力翻倍 ⚡';
+        }
+        player2Status.textContent = p2Status;
+        
+        // 添加特殊样式
+        if (gameState.playerEffects[1].doubleDamage) {
+            player1Status.style.color = '#ffd700';
+            player1Status.style.textShadow = '0 0 5px rgba(255, 215, 0, 0.5)';
+        } else {
+            player1Status.style.color = '';
+            player1Status.style.textShadow = '';
+        }
+        
+        if (gameState.playerEffects[2].doubleDamage) {
+            player2Status.style.color = '#ffd700';
+            player2Status.style.textShadow = '0 0 5px rgba(255, 215, 0, 0.5)';
+        } else {
+            player2Status.style.color = '';
+            player2Status.style.textShadow = '';
+        }
+    }
+
+    function updateSkillButtons() {
+        const currentPlayer = gameState.players[gameState.currentPlayer];
+        const skillButtons = document.querySelectorAll('.center-skill-btn');
+        
+        skillButtons.forEach(button => {
+            const skillType = button.dataset.skill;
+            const cost = parseInt(button.dataset.cost);
+            
+            let disabled = false;
+            
+            // 检查血量
+            if (currentPlayer.hp <= cost) {
+                disabled = true;
+            }
+            
+            // 检查特殊条件
+            if (skillType === 'breakthrough' && gameState.turnCount < 4) {
+                disabled = true;
+            }
+            
+            // 检查游戏状态
+            if (gameState.gameEnded) {
+                disabled = true;
+            }
+            
+            button.disabled = disabled;
+            
+            // 更新激活状态
+            if (gameState.skillMode.active && gameState.skillMode.type === skillType) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        });
+    }
+
+    function showHealAnimation(playerId, amount) {
+        const playerInfo = playerId === 1 ? player1Info : player2Info;
+        const rect = playerInfo.getBoundingClientRect();
+        const popup = document.createElement('div');
+        popup.classList.add(amount > 0 ? 'heal-popup' : 'damage-popup');
+        popup.textContent = amount > 0 ? `+${amount}` : `${amount}`;
+        popup.style.left = `${rect.left + rect.width / 2}px`;
+        popup.style.top = `${rect.top}px`;
+        popup.style.transform = 'translateX(-50%)';
+        document.body.appendChild(popup);
+        
+        setTimeout(() => {
+            popup.classList.add('fade-up');
+            setTimeout(() => {
+                if (popup && document.body.contains(popup)) {
+                    document.body.removeChild(popup);
+                }
+            }, 1000);
+        }, 10);
+    }
+
+    function showMessage(text, type = 'info') {
+        const message = document.createElement('div');
+        message.style.position = 'fixed';
+        message.style.top = '20px';
+        message.style.left = '50%';
+        message.style.transform = 'translateX(-50%)';
+        message.style.zIndex = '1001';
+        message.style.padding = '10px 20px';
+        message.style.borderRadius = '5px';
+        message.style.fontSize = '14px';
+        message.style.fontWeight = 'bold';
+        message.style.transition = 'all 0.3s ease';
+        
+        if (type === 'error') {
+            message.style.background = '#f44336';
+            message.style.color = 'white';
+        } else if (type === 'success') {
+            message.style.background = '#4caf50';
+            message.style.color = 'white';
+        } else {
+            message.style.background = '#2196f3';
+            message.style.color = 'white';
+        }
+        
+        message.textContent = text;
+        document.body.appendChild(message);
+        
+        setTimeout(() => {
+            message.style.opacity = '0';
+            message.style.transform = 'translateX(-50%) translateY(-20px)';
+            setTimeout(() => {
+                if (message && document.body.contains(message)) {
+                    document.body.removeChild(message);
+                }
+            }, 300);
+        }, 2000);
+    }
+
+    function showModifySkillModal(playerId, cost) {
+        const modal = document.createElement('div');
+        modal.className = 'game-modal';
+        modal.innerHTML = `
+            <h2>数字修改技能</h2>
+            <div class="modal-message">选择目标和操作：</div>
+            <div class="skill-options">
+                <button class="modal-btn skill-option-btn" data-target="self" data-action="add">己方 +1</button>
+                <button class="modal-btn skill-option-btn" data-target="self" data-action="sub">己方 -1</button>
+                <button class="modal-btn skill-option-btn" data-target="opponent" data-action="add">对方 +1</button>
+                <button class="modal-btn skill-option-btn" data-target="opponent" data-action="sub">对方 -1</button>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn" id="cancel-modify">取消</button>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        setTimeout(() => {
+            modal.classList.add('show');
+            
+            document.getElementById('cancel-modify').addEventListener('click', () => {
+                if (modal && document.body.contains(modal)) {
+                    document.body.removeChild(modal);
+                }
+            });
+            
+            document.querySelectorAll('.skill-option-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const target = btn.dataset.target;
+                    const action = btn.dataset.action;
+                    
+                    // 扣除血量
+                    gameState.players[playerId].hp -= cost;
+                    updatePlayersHP();
+                    showHealAnimation(playerId, -cost);
+                    
+                    // 检查是否因技能消耗血量而死亡
+                    if (gameState.players[playerId].hp <= 0) {
+                        gameState.gameEnded = true;
+                        const winnerId = playerId === 1 ? 2 : 1;
+                        if (modal && document.body.contains(modal)) {
+                            document.body.removeChild(modal);
+                        }
+                        setTimeout(() => {
+                            showGameEndModal(winnerId);
+                        }, 500);
+                        return;
+                    }
+                    
+                    // 执行修改
+                    const targetPlayerId = target === 'self' ? playerId : (playerId === 1 ? 2 : 1);
+                    const isAdd = action === 'add';
+                    modifyPlayerNumbers(targetPlayerId, isAdd);
+                    
+                    if (modal && document.body.contains(modal)) {
+                        document.body.removeChild(modal);
+                    }
+                    updateSkillButtons();
+                    
+                    const actionText = isAdd ? '+1' : '-1';
+                    const targetText = target === 'self' ? '己方' : '对方';
+                    showMessage(`${targetText}场上所有数字${actionText}！`, 'success');
+                    playSound('merge');
+                });
+            });
+        }, 10);
+    }
+
+    function modifyPlayerNumbers(playerId, isAdd) {
+        const player = gameState.players[playerId];
+        let modifiedCount = 0;
+        
+        for (let i = 0; i < gameState.boardSize; i++) {
+            for (let j = 0; j < gameState.boardSize; j++) {
+                if (player.board[i][j] !== null && player.board[i][j] !== 0 && player.board[i][j] !== 50) {
+                    if (isAdd) {
+                        player.board[i][j]++;
+                        modifiedCount++;
+                    } else if (player.board[i][j] > 1) {
+                        player.board[i][j]--;
+                        modifiedCount++;
+                    }
+                    updateCellDisplay(playerId, i, j);
+                    
+                    // 添加修改动画
+                    const cellElement = player.cellElements[i][j];
+                    cellElement.classList.add('highlight');
+                    setTimeout(() => {
+                        cellElement.classList.remove('highlight');
+                    }, 300);
+                }
+            }
+        }
+    }
+
+    // 结束回合
+    function endTurn() {
+        // 防止重复调用
+        if (gameState.gameEnded) return;
+        
+        // 防止在短时间内重复调用endTurn
+        const now = Date.now();
+        if (now - gameState.lastEndTurnTime < 500) return; // 减少到500ms防抖
+        gameState.lastEndTurnTime = now;
+        
+        // 如果还没有设置结束回合标志，现在设置它
+        if (!gameState.isEndingTurn) {
+            gameState.isEndingTurn = true;
+        }
+        
+        // 清除计时器
+        if (gameState.turnTimer) {
+            clearInterval(gameState.turnTimer);
+            gameState.turnTimer = null;
+        }
+        
+        const currentPlayerData = gameState.players[gameState.currentPlayer];
+        
+        // 检查是否被禁用回血
+        if (!gameState.playerEffects[gameState.currentPlayer].healBlocked) {
+            // 获取场上最大数字作为治疗量
+            const healAmount = getMaxValueOnBoard(gameState.currentPlayer);
+            
+            // 自己生命值+场上最大数字（但不超过最大值）
+            if (currentPlayerData.hp < currentPlayerData.maxHp) {
+                playSound('heal');
+                const actualHeal = Math.min(healAmount, currentPlayerData.maxHp - currentPlayerData.hp);
+                currentPlayerData.hp += actualHeal;
+                
+                // 显示治疗动画
+                const currentInfo = gameState.currentPlayer === 1 ? player1Info : player2Info;
+                const rect = currentInfo.getBoundingClientRect();
+                const healPopup = document.createElement('div');
+                healPopup.classList.add('heal-popup');
+                healPopup.textContent = `+${actualHeal}`;
+                healPopup.style.left = `${rect.left + rect.width / 2}px`;
+                healPopup.style.top = `${rect.top}px`;
+                document.body.appendChild(healPopup);
+                
+                setTimeout(() => {
+                    healPopup.classList.add('fade-up');
+                    setTimeout(() => {
+                        if (document.body.contains(healPopup)) {
+                            document.body.removeChild(healPopup);
+                        }
+                    }, 1000);
+                }, 10);
+                
+                // HP动画效果
+                const currentHpFill = gameState.currentPlayer === 1 ? player1HpFill : player2HpFill;
+                currentHpFill.classList.add('hp-heal');
+                setTimeout(() => {
+                    currentHpFill.classList.remove('hp-heal');
+                }, 500);
+            }
+        }
+        
+        updatePlayersHP();
+        
+        // 切换玩家
+        const opponentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
+        gameState.currentPlayer = opponentPlayer;
+        
+        // 每两次切换增加一回合（玩家1->玩家2->玩家1算一个完整回合）
+        if (gameState.currentPlayer === 1) {
+            gameState.turnCount++;
+        }
+        
+        // 更新回合显示
+        document.getElementById('turn-count').textContent = gameState.turnCount;
+        
+        // 重置新玩家的状态 - 行动力只恢复1格
+        const newPlayerData = gameState.players[gameState.currentPlayer];
+        newPlayerData.clicksLeft = Math.min(newPlayerData.clicksLeft + 1, newPlayerData.maxClicks);
+        
+        // 更新回血禁用状态
+        for (let pid = 1; pid <= 2; pid++) {
+            if (gameState.playerEffects[pid].healBlocked && gameState.playerEffects[pid].healBlockTurns > 0) {
+                gameState.playerEffects[pid].healBlockTurns--;
+                if (gameState.playerEffects[pid].healBlockTurns <= 0) {
+                    gameState.playerEffects[pid].healBlocked = false;
+                }
+            }
+            
+            // 重置攻击力翻倍效果（每回合结束时清除）
+            gameState.playerEffects[pid].doubleDamage = false;
+        }
+        
+        // 取消技能模式
+        if (gameState.skillMode.active) {
+            cancelSkillMode();
+        }
+        
+        // 重置回合结束标志
+        gameState.isEndingTurn = false;
+        
+        updateAllDisplays();
+        updateCurrentPlayerUI();
+        updateHealStatus();
+        updateSkillButtons();
+        
+        // 开始新回合的计时器
+        startTurnTimer();
+        
+        // 不重新生成棋盘，继续使用当前棋盘状态
+        // 移除了重新生成棋盘的代码
+    }
+
+    // 计时器相关函数
+    function startTurnTimer() {
+        // 清除现有计时器
+        if (gameState.turnTimer) {
+            clearInterval(gameState.turnTimer);
+        }
+        
+        // 设置回合时间（第一回合30秒，之后60秒）
+        if (gameState.isFirstTurn) {
+            gameState.timeLeft = 30;
+            gameState.isFirstTurn = false;
+        } else {
+            gameState.timeLeft = 60;
+        }
+        
+        updateTimerDisplay();
+        
+        gameState.turnTimer = setInterval(() => {
+            gameState.timeLeft--;
+            updateTimerDisplay();
+            
+            if (gameState.timeLeft <= 0) {
+                clearInterval(gameState.turnTimer);
+                gameState.turnTimer = null;
+                // 时间到，自动结束回合
+                if (!gameState.isEndingTurn && !gameState.gameEnded && !gameState.endTurnCooldown) {
+                    gameState.isEndingTurn = true;
+                    gameState.endTurnCooldown = true;
+                    endTurnButton.disabled = true;
+                    
+                    // 强制1秒全局冷却
+                    setTimeout(() => {
+                        gameState.endTurnCooldown = false;
+                    }, 1000);
+                    
+                    setTimeout(() => {
+                        if (!gameState.gameEnded) {
+                            endTurn();
+                        }
+                    }, 100);
+                }
+            }
+        }, 1000);
+    }
+    
+    function updateTimerDisplay(timerDisplayEl = null, timerValueEl = null) {
+        const timerDisplay = timerDisplayEl || document.getElementById('timer-display');
+        const timerValue = timerValueEl || document.getElementById('timer-value');
+        
+        if (timerValue) {
+            timerValue.textContent = gameState.timeLeft;
+        }
+        
+        if (timerDisplay) {
+            // 移除之前的样式
+            timerDisplay.classList.remove('warning', 'danger');
+            
+            // 根据剩余时间添加样式
+            if (gameState.timeLeft <= 5) {
+                timerDisplay.classList.add('danger');
+            } else if (gameState.timeLeft <= 15) {
+                timerDisplay.classList.add('warning');
+            }
+        }
+    }
+    
+    function checkAutoEndTurn() {
+        // 防止重复调用
+        if (gameState.isEndingTurn || gameState.gameEnded || gameState.isAnimating) return;
+        
+        const currentPlayer = gameState.players[gameState.currentPlayer];
+        if (currentPlayer.clicksLeft < 1) {
+            // 行动力不足1，自动结束回合
+            if (!gameState.endTurnCooldown) {
+                gameState.isEndingTurn = true;
+                gameState.endTurnCooldown = true;
+                endTurnButton.disabled = true;
+                
+                // 强制1秒全局冷却
+                setTimeout(() => {
+                    gameState.endTurnCooldown = false;
+                }, 1000);
+                
+                setTimeout(() => {
+                    if (!gameState.gameEnded) {
+                        endTurn();
+                    }
+                }, 800);
+            }
+        }
+    }
+
+    function showGameEndModal(winnerPlayer) {
+        const modal = document.createElement('div');
+        modal.id = 'game-end-modal';
+        modal.className = 'game-modal';
+        
+        const winnerClass = winnerPlayer === 1 ? 'player1-victory' : 'player2-victory';
+        
+        let message = '<h2>游戏结束</h2>';
+        message += `<div class="victory-message ${winnerClass}">玩家${winnerPlayer} 获胜！</div>`;
+        
+        message += `<div class="game-results">
+            <p>玩家1 剩余生命值: <span class="highlight-text">${gameState.players[1].hp}</span></p>
+            <p>玩家2 剩余生命值: <span class="highlight-text">${gameState.players[2].hp}</span></p>
+        </div>`;
+        
+        message += '<div class="modal-buttons">'+
+            '<button id="modal-restart-btn" class="modal-btn primary-btn">再来一局</button>'+
+        '</div>';
+        
+        modal.innerHTML = message;
+        document.body.appendChild(modal);
+        
+        setTimeout(() => {
+            document.getElementById('modal-restart-btn').addEventListener('click', () => {
+                if (modal && document.body.contains(modal)) {
+                    document.body.removeChild(modal);
+                }
+                initGame();
+            });
+            
+            modal.classList.add('show');
+        }, 10);
+    }
+
+    function showConfirmModal(title, message, onConfirm) {
+        const modal = document.createElement('div');
+        modal.id = 'confirm-modal';
+        modal.className = 'game-modal';
+        
+        const content = `
+            <h2>${title}</h2>
+            <div class="modal-message">${message}</div>
+            <div class="modal-buttons">
+                <button id="modal-cancel-btn" class="modal-btn">取消</button>
+                <button id="modal-confirm-btn" class="modal-btn primary-btn">确定</button>
+            </div>
+        `;
+        
+        modal.innerHTML = content;
+        document.body.appendChild(modal);
+        
+        setTimeout(() => {
+            document.getElementById('modal-cancel-btn').addEventListener('click', () => {
+                if (modal && document.body.contains(modal)) {
+                    document.body.removeChild(modal);
+                }
+            });
+            
+            document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+                if (modal && document.body.contains(modal)) {
+                    document.body.removeChild(modal);
+                }
+                if (typeof onConfirm === 'function') {
+                    onConfirm();
+                }
+            });
+            
+            modal.classList.add('show');
+        }, 10);
+    }
+});
+    </script>
+</body>
+</html>
